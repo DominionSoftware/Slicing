@@ -1,0 +1,29 @@
+{
+  "name": "slicing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --progress --colors --mode development",
+    "build:release": "webpack --progress --colors --mode production",
+    "start": "webpack-dev-server --content-base ./src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DominionSoftware/Slicing.git"
+  },
+  "author": "",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/DominionSoftware/Slicing/issues"
+  },
+  "homepage": "https://github.com/DominionSoftware/Slicing#readme",
+  "dependencies": {
+    "vtk.js": "^7.4.10"
+  },
+  "devDependencies": {
+    "kw-web-suite": "^6.2.0",
+    "webpack": "^4.16.3",
+    "webpack-dev-server": "^3.1.5"
+  }
+}
