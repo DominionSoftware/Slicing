@@ -1,7 +1,6 @@
 {
   "name": "slicing",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "build": "webpack --progress --colors --mode development",
@@ -19,11 +18,12 @@
   },
   "homepage": "https://github.com/DominionSoftware/Slicing#readme",
   "dependencies": {
-    "vtk.js": "^7.4.10"
+    "vtk.js": "^7.5.0"
   },
   "devDependencies": {
     "kw-web-suite": "^6.2.0",
     "webpack": "^4.16.3",
     "webpack-dev-server": "^3.1.5"
-  }
+  },
+  "description": ""
 }

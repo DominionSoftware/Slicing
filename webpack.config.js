@@ -11,7 +11,7 @@ module.exports = {
         path: outputPath, filename: 'Slicing.js',
     },
     module: {
-        rules: [{test: entry, loader: "expose-loader?MyWebApp"}, {
+        rules: [{test: entry, loader: "expose-loader?Slicing"}, {
             test: /\.html$/,
             loader: 'html-loader'
         },].concat(vtkRules),
