@@ -4,20 +4,12 @@ import { States } from 'vtk.js/Sources/Rendering/Core/InteractorStyle/Constants'
 import vtkImageMapper from 'vtk.js/Sources/Rendering/Core/ImageMapper';
 import Constants from "vtk.js/Sources/Rendering/Core/ImageMapper/Constants";
 
-function ohifInteractorStyleSlice(publicAPI, model,initialValues) {
-    debugger;
+function ohifInteractorStyleSlice(publicAPI, model) {
+
     // Set our className
     model.classHierarchy.push('ohifInteractorStyleSlice');
-    model.currentZIndex = initialValues.initialZIndex;
-    model.currentYIndex = initialValues.initialYIndex;
-    model.currentXIndex = initialValues.initialXIndex;
+    macro.setGet(publicAPI, model, ['directionalProperties']);
 
-    model.xPositions = initialValues.xPositions;
-    model.yPositions = initialValues.yPositions;
-    model.zPositions = initialValues.zPositions;
-    model.zSpacing = initialValues.zSpacing;
-    model.ySpacing = initialValues.ySpacing;
-    model.xSpacing = initialValues.xSpacing;
     // Public API methods
     publicAPI.superHandleMouseMove = publicAPI.handleMouseMove;
     publicAPI.handleMouseMove = (callData) => {
@@ -91,6 +83,8 @@ function ohifInteractorStyleSlice(publicAPI, model,initialValues) {
     //--------------------------------------------------------------------------
     publicAPI.handleMouseWheel = (callData) => {
         let slice = publicAPI.findSlice();
+        let props = publicAPI.getDirectionalProperties();
+
         let increment = 0;
         if (callData.spinY < 0){
             increment = 1;
@@ -99,16 +93,47 @@ function ohifInteractorStyleSlice(publicAPI, model,initialValues) {
         {
             increment = -1;
         }
-        if (slice) {
-            let currentZPosition = model.currentZPosition;
-            let newZPos = currentZPosition + (model.zSpacing * increment);
 
-           slice.getMapper().setSlicingMode(Constants.SlicingMode.Z)
-            let id = slice.getMapper().getSliceAtPosition(newZPos);
-           if (id != undefined) {
-               model.currentZPosition = newZPos;
-               slice.getMapper().setKSlice(id);
+        if (slice) {
+            let mode = slice.getMapper().getSlicingMode();
+            let currentPosition = undefined;
+            let newPos = undefined;
+            switch(mode){
+                case vtkImageMapper.SlicingMode.Z:
+                    currentPosition = props.currentZIndex * props.zSpacing;
+                    newPos = currentPosition + (props.zSpacing * increment);
+                    break;
+                case vtkImageMapper.SlicingMode.Y:
+                    currentPosition = props.currentYIndex * props.ySpacing;
+                    newPos = currentPosition + (props.ySpacing * increment);
+                    console.log(newPos);
+                    console.log(props.ySpacing);
+                    break;
+                case vtkImageMapper.SlicingMode.X:
+                    currentPosition = props.currentXIndex * props.xSpacing;
+                    newPos = currentPosition + (props.xSpacing * increment);
+                    break;
+            }
+
+
+           slice.getMapper().setSlicingMode(mode);
+            let idx = slice.getMapper().getSliceAtPosition(newPos);
+
+           switch(mode) {
+               case vtkImageMapper.SlicingMode.Z:
+                   props.currentZIndex = idx;
+                   slice.getMapper().setZSlice(idx);
+                   break;
+               case vtkImageMapper.SlicingMode.Y:
+                   props.currentYIndex = idx;
+                   slice.getMapper().setYSlice(idx);
+                   break;
+               case vtkImageMapper.SlicingMode.X:
+                   props.currentXIndex = idx;
+                   slice.getMapper().setXSlice(idx);
+                   break;
            }
+
 
         }
     };
@@ -283,8 +308,8 @@ export function extend(publicAPI, model, initialValues = {}) {
 
 // ----------------------------------------------------------------------------
 
-export const newOHIFInstance = macro.newInstance(extend, 'ohifInteractorStyleSlice');
+export const newInstance = macro.newInstance(extend, 'ohifInteractorStyleSlice');
 
 // ----------------------------------------------------------------------------
 
-export default Object.assign({ newOHIFInstance, extend });
+export default Object.assign({ newInstance, extend });

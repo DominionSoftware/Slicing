@@ -22,7 +22,6 @@ let xCurrentIndex = undefined;
 fetch(url).then(function(response) {
     response.text().then(function(text) {
         let imageData = JSON.parse(text);
-        debugger;
 
         let data = vtkImageData.newInstance();
 
@@ -36,17 +35,17 @@ fetch(url).then(function(response) {
         }
         yIPP.push(ipp[1]);
         for(let y = 1; y < imageData.dims[1]; y++){
-            yIPP.push(yIPP[y-1]+imageData.spacing[0]);
+            yIPP.push(yIPP[y-1]+imageData.spacing[1]);
         }
         zIPP.push(ipp[2]);
-        for(let z = 1; z < imageData.dims[1]; z++){
-            zIPP.push(zIPP[z-1]+imageData.spacing[0]);
+        for(let z = 1; z < imageData.dims[2]; z++){
+            zIPP.push(zIPP[z-1]+imageData.spacing[2]);
         }
         zCurrentIndex = zIPP.length/2 | 0;
         yCurrentIndex = yIPP.length/2 |0;
         xCurrentIndex = xIPP.length/2 |0;
 
-        debugger;
+
         let pixelArray = new Int16Array(imageData.dims[0] * imageData.dims[1] * imageData.dims[2]);
         let  pixelIndex = 0;
         for(let x = 0; x < imageData.dims[0];x++) {
@@ -70,9 +69,9 @@ fetch(url).then(function(response) {
         });
 
         let initialValues = {
-            initialZIndex : zCurrentIndex,
-            initialYIndex : yCurrentIndex,
-            initialXIndex : xCurrentIndex,
+            currentZIndex : zCurrentIndex,
+            currentYIndex : yCurrentIndex,
+            currentXIndex : xCurrentIndex,
             zPositions : zIPP,
             yPositions: yIPP,
             xPositions: xIPP,
@@ -80,7 +79,10 @@ fetch(url).then(function(response) {
             ySpacing: imageData.spacing[1],
             xSpacing: imageData.spacing[0]
         }
-        const interactorStyle = ohifInteractorStyleSlice.newOHIFInstance(extend, 'ohifInteractorStyleSlice',initialValues);
+
+        const interactorStyle = ohifInteractorStyleSlice.newInstance(extend, 'ohifInteractorStyleSlice');
+        interactorStyle.setDirectionalProperties(initialValues);
+
         interactorStyle.setInteractionMode('IMAGE_SLICE');
         const renderWindow = fullScreenRenderWindow.getRenderWindow();
 
@@ -111,19 +113,123 @@ fetch(url).then(function(response) {
             renderWindow.render();
         }
 
+        function computeSlicingModeForAP(viewOrientation){
+            switch(viewOrientation){
+                case 'A':
+                case 'P':
+                    return vtkImageMapper.SlicingMode.Y;
+                    break;
+                case 'I':
+                case 'S':
+                    return vtkImageMapper.SlicingMode.X
+                    break;
+                case 'L':
+                case 'R':
+                    return vtkImageMapper.SlicingMode.Z;
+                    break;
+            }
+        }
+
+        function computeSlicingModeForIS(viewOrientation){
+            switch(viewOrientation){
+                case 'I':
+                case 'S':
+                    return vtkImageMapper.SlicingMode.Z;
+                    break;
+                case 'A':
+                case 'P':
+                    return vtkImageMapper.SlicingMode.Y;
+                    break;
+                case 'L':
+                case 'R':
+                    return  vtkImageMapper.SlicingMode.X;
+                    break;
+            }
+        }
+
+        function computeSlicingModeForLR(viewOrientation){
+            switch(viewOrientation){
+                case 'L':
+                case 'R':
+                    return vtk.Rendering.Core.vtkImageMapper.SlicingMode.Z;
+                    break;
+                case 'I':
+                case 'S':
+                    return vtk.Rendering.Core.vtkImageMapper.SlicingMode.Y;
+                    break;
+                case 'A':
+                case 'P':
+                    return vtk.Rendering.Core.vtkImageMapper.SlicingMode.X;
+                    break;
+            }
+        }
 
 
+        function computeSlicingMode(imageOrientation,viewOrientation){
+
+            switch(imageOrientation){
+                case 'A':
+                case 'P':
+                    return computeSlicingModeForAP(viewOrientation);
+                    break;
+                case 'I':
+                case 'S':
+                    return computeSlicingModeForIS(viewOrientation);
+                    break;
+                case 'L':
+                case 'R':
+                    return computeSlicingModeForLR(viewOrientation);
+                    break;
+            }
+        }
+
+        function computeCameraForAP(viewOrientation,camera){
+            switch(viewOrientation){
+                case 'A':
+                case 'P':
+                    camera.azimuth(-90);
+                    camera.elevation(90);
+                    camera.orthogonalizeViewUp();
+                    console.log(camera);
+                    break;
+
+                case 'I':
+                case 'S':
+                    camera.azimuth(90);
+                    camera.roll(180);
+                    break;
+                case 'L':
+                case 'R':
+                    camera.roll(90);
+                    camera.azimuth(180);
+
+                    break;
+            }
+
+        }
+
+        function computeCamera(imageOrientation,viewOrientation,camera){
+            switch(imageOrientation){
+                case 'A':
+                case 'P':
+                    return computeCameraForAP(viewOrientation,camera);
+                    break;
+
+            }
+
+        }
         const dataRange = data
             .getPointData()
             .getScalars()
             .getRange();
         const extent = data.getExtent();
-        debugger;
+
         const imageMapper = vtkImageMapper.newInstance();
         imageMapper.setInputData(data);
         imageActor.setMapper(imageMapper);
-
-
+        let  mode = computeSlicingMode('A','A');
+        imageMapper.setSlicingMode(mode);
+        computeCamera('A','A', renderer.getActiveCamera());
         renderer.resetCamera();
         renderer.resetCameraClippingRange();
         renderWindow.getInteractor().setInteractorStyle(interactorStyle);
