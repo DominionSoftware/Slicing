@@ -2,7 +2,7 @@ import macro from 'vtk.js/Sources/macro';
 import vtkInteractorStyleTrackballCamera from 'vtk.js/Sources/Interaction/Style/InteractorStyleTrackballCamera';
 import { States } from 'vtk.js/Sources/Rendering/Core/InteractorStyle/Constants';
 import vtkImageMapper from 'vtk.js/Sources/Rendering/Core/ImageMapper';
-import Constants from "vtk.js/Sources/Rendering/Core/ImageMapper/Constants";
+//import Constants from "vtk.js/Sources/Rendering/Core/ImageMapper/Constants";
 
 function ohifInteractorStyleSlice(publicAPI, model) {
 
@@ -72,7 +72,6 @@ function ohifInteractorStyleSlice(publicAPI, model) {
     //--------------------------------------------------------------------------
     publicAPI.handleStartMouseWheel = (callData) => {
         publicAPI.startSlice();
-        publicAPI.handleMouseWheel(callData);
     };
 
     //--------------------------------------------------------------------------
@@ -82,10 +81,7 @@ function ohifInteractorStyleSlice(publicAPI, model) {
 
     //--------------------------------------------------------------------------
     publicAPI.handleMouseWheel = (callData) => {
-        let slice = publicAPI.findSlice();
-        let props = publicAPI.getDirectionalProperties();
-
-        let increment = 0;
+       let increment = 0;
         if (callData.spinY < 0){
             increment = 1;
         }
@@ -93,51 +89,75 @@ function ohifInteractorStyleSlice(publicAPI, model) {
         {
             increment = -1;
         }
+        publicAPI.moveSliceByWheel(increment);
+    };
+
+    publicAPI.moveSliceByWheel = (increment)=>{
+
+        let slice = publicAPI.findSlice();
+        let props = publicAPI.getDirectionalProperties();
 
         if (slice) {
+            const renderer = model.interactor.getCurrentRenderer();
+            renderer.getActiveCamera().setParallelProjection(true);
+
             let mode = slice.getMapper().getSlicingMode();
             let currentPosition = undefined;
             let newPos = undefined;
+            let worldPos = undefined;
             switch(mode){
                 case vtkImageMapper.SlicingMode.Z:
                     currentPosition = props.currentZIndex * props.zSpacing;
                     newPos = currentPosition + (props.zSpacing * increment);
+                    worldPos = props.zPositions[props.currentZIndex];
                     break;
                 case vtkImageMapper.SlicingMode.Y:
                     currentPosition = props.currentYIndex * props.ySpacing;
                     newPos = currentPosition + (props.ySpacing * increment);
-                    console.log(newPos);
-                    console.log(props.ySpacing);
+                    worldPos = props.yPositions[props.currentYIndex];
                     break;
                 case vtkImageMapper.SlicingMode.X:
                     currentPosition = props.currentXIndex * props.xSpacing;
                     newPos = currentPosition + (props.xSpacing * increment);
+                    worldPos = props.xPositions[props.currentXIndex];
                     break;
             }
 
-
-           slice.getMapper().setSlicingMode(mode);
+            if (newPos < 0){
+                newPos = 0.0;
+            }
+            slice.getMapper().setSlicingMode(mode);
             let idx = slice.getMapper().getSliceAtPosition(newPos);
 
-           switch(mode) {
-               case vtkImageMapper.SlicingMode.Z:
-                   props.currentZIndex = idx;
-                   slice.getMapper().setZSlice(idx);
-                   break;
-               case vtkImageMapper.SlicingMode.Y:
-                   props.currentYIndex = idx;
-                   slice.getMapper().setYSlice(idx);
-                   break;
-               case vtkImageMapper.SlicingMode.X:
-                   props.currentXIndex = idx;
-                   slice.getMapper().setXSlice(idx);
-                   break;
-           }
 
+            switch(mode) {
+                case vtkImageMapper.SlicingMode.Z:
+                    props.currentZIndex = idx;
+                    slice.getMapper().setZSlice(idx);
+                    break;
+                case vtkImageMapper.SlicingMode.Y:
+                    props.currentYIndex = idx;
+                    slice.getMapper().setYSlice(idx+1);
+                    break;
+                case vtkImageMapper.SlicingMode.X:
+                    props.currentXIndex = idx;
+                    slice.getMapper().setXSlice(idx);
+                    break;
+            }
 
+            renderer.resetCamera();
+            document.getElementById("p2").innerHTML = "Slice # " + idx;
+            document.getElementById("p21").innerHTML = "Position " + newPos;
+            document.getElementById("p22").innerHTML = " World Position " + worldPos;
+            let camPos = renderer.getActiveCamera().getPosition();
+            let camPosF = [Number.parseFloat(camPos[0]).toFixed(2),Number.parseFloat(camPos[1]).toFixed(2),Number.parseFloat(camPos[2]).toFixed(2)]
+            document.getElementById("p3").innerHTML = "Camera Position " + camPosF;
+            let slicePos = slice.getPosition();
+            let slicePosF = [Number.parseFloat(slicePos[0]).toFixed(2),Number.parseFloat(slicePos[1]).toFixed(2),Number.parseFloat(slicePos[2]).toFixed(2)]
+
+            document.getElementById("p4").innerHTML = "Slice Position " + slicePos;
         }
-    };
-
+    }
     //----------------------------------------------------------------------------
     publicAPI.windowLevel = (renderer, position) => {
         model.windowLevelCurrentPosition[0] = position.x;

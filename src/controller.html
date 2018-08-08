@@ -1,22 +1,51 @@
 <table>
     <tr>
-        <td>Slice I</td>
         <td>
-            <input class='slice' type="range" min="0" max="2.0" step="1" value="1"/>
-        </td>
-    </tr>
-
-
-    <tr>
-        <td>Color level</td>
-        <td>
-            <input class='colorLevel' type="range" min="-3926" max="3926" step="1" value="1"/>
+            <p id="p0">Scan Direction File</p>
+            <form>
+                <select id="imageDropDown">
+                    <option value="A">AP.json</option>
+                    <option value="I">IS.json</option>
+                    <option value="L">LR.json</option>
+                </select>
+            </form>
         </td>
     </tr>
     <tr>
-        <td>ColorWindow</td>
         <td>
-            <input class='colorWindow' type="range" min="0" max="3926" step="1" value="1"/>
+            <p id="p1">View Direction</p>
+            <form>
+                <select id="viewDropDown">
+                    <option value="A">Coronal</option>
+                    <option value="I">Axial</option>
+                    <option value="L">Sagittal</option>
+                </select>
+            </form>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p id="p2">Slice #</p>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p id="p21">Position</p>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p id="p22">World Position</p>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p id="p3">Camera Position</p>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <p id="p4">Image Actor Position</p>
         </td>
     </tr>
 </table>
