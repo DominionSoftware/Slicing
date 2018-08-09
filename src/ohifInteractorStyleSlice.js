@@ -1,14 +1,16 @@
 import macro from 'vtk.js/Sources/macro';
 import vtkInteractorStyleTrackballCamera from 'vtk.js/Sources/Interaction/Style/InteractorStyleTrackballCamera';
-import { States } from 'vtk.js/Sources/Rendering/Core/InteractorStyle/Constants';
+import {States} from 'vtk.js/Sources/Rendering/Core/InteractorStyle/Constants';
 import vtkImageMapper from 'vtk.js/Sources/Rendering/Core/ImageMapper';
-//import Constants from "vtk.js/Sources/Rendering/Core/ImageMapper/Constants";
 
 function ohifInteractorStyleSlice(publicAPI, model) {
 
     // Set our className
     model.classHierarchy.push('ohifInteractorStyleSlice');
     macro.setGet(publicAPI, model, ['directionalProperties']);
+    macro.setGet(publicAPI, model, ['lastCameraPosition']);
+
+    publicAPI.setLastCameraPosition(undefined);
 
     // Public API methods
     publicAPI.superHandleMouseMove = publicAPI.handleMouseMove;
@@ -19,11 +21,19 @@ function ohifInteractorStyleSlice(publicAPI, model) {
         switch (model.state) {
             case States.IS_WINDOW_LEVEL:
                 publicAPI.windowLevel(renderer, pos);
-                publicAPI.invokeInteractionEvent({ type: 'InteractionEvent' });
+                publicAPI.invokeInteractionEvent({type: 'InteractionEvent'});
+                break;
+            case States.IS_DOLLY:
+                publicAPI.handleMouseDolly(renderer, pos);
+                publicAPI.invokeInteractionEvent({type: 'InteractionEvent'});
+                let camPos = renderer.getActiveCamera().getPosition();
+                let camPosF = [Number.parseFloat(camPos[0]).toFixed(2), Number.parseFloat(camPos[1]).toFixed(2), Number.parseFloat(camPos[2]).toFixed(2)]
+                document.getElementById("p3").innerHTML = "Camera Position " + camPosF;
                 break;
             default:
                 break;
         }
+        publicAPI.setLastCameraPosition(renderer.getActiveCamera().getPosition());
         publicAPI.superHandleMouseMove(callData);
     };
 
@@ -69,7 +79,36 @@ function ohifInteractorStyleSlice(publicAPI, model) {
         }
     };
 
+    //----------------------------------------------------------------------------
+    publicAPI.superHandleRightButtonPress = publicAPI.handleRightButtonPress;
+    publicAPI.handleRightButtonPress = (callData) => {
+        const pos = callData.position;
+        model.previousPosition = pos;
+        publicAPI.startDolly();
+    };
+
     //--------------------------------------------------------------------------
+    publicAPI.superHandleRightButtonRelease = publicAPI.handleRightButtonRelease;
+    publicAPI.handleRightButtonRelease = () => {
+        switch (model.state) {
+            case States.IS_WINDOW_LEVEL:
+                publicAPI.endWindowLevel();
+                break;
+            case States.IS_SLICE:
+                publicAPI.endSlice();
+                break;
+            case States.IS_DOLLY:
+                publicAPI.endDolly();
+                break;
+            default:
+                publicAPI.superHandleRightButtonRelease();
+                break;
+        }
+    };
+
+
+    //--------------------------------------------------------------------------
+
     publicAPI.handleStartMouseWheel = (callData) => {
         publicAPI.startSlice();
     };
@@ -81,18 +120,17 @@ function ohifInteractorStyleSlice(publicAPI, model) {
 
     //--------------------------------------------------------------------------
     publicAPI.handleMouseWheel = (callData) => {
-       let increment = 0;
-        if (callData.spinY < 0){
+        let increment = 0;
+        if (callData.spinY < 0) {
             increment = 1;
         }
-        else
-        {
+        else {
             increment = -1;
         }
         publicAPI.moveSliceByWheel(increment);
     };
 
-    publicAPI.moveSliceByWheel = (increment)=>{
+    publicAPI.moveSliceByWheel = (increment) => {
 
         let slice = publicAPI.findSlice();
         let props = publicAPI.getDirectionalProperties();
@@ -105,7 +143,7 @@ function ohifInteractorStyleSlice(publicAPI, model) {
             let currentPosition = undefined;
             let newPos = undefined;
             let worldPos = undefined;
-            switch(mode){
+            switch (mode) {
                 case vtkImageMapper.SlicingMode.Z:
                     currentPosition = props.currentZIndex * props.zSpacing;
                     newPos = currentPosition + (props.zSpacing * increment);
@@ -123,21 +161,21 @@ function ohifInteractorStyleSlice(publicAPI, model) {
                     break;
             }
 
-            if (newPos < 0){
+            if (newPos < 0) {
                 newPos = 0.0;
             }
             slice.getMapper().setSlicingMode(mode);
             let idx = slice.getMapper().getSliceAtPosition(newPos);
 
 
-            switch(mode) {
+            switch (mode) {
                 case vtkImageMapper.SlicingMode.Z:
                     props.currentZIndex = idx;
                     slice.getMapper().setZSlice(idx);
                     break;
                 case vtkImageMapper.SlicingMode.Y:
                     props.currentYIndex = idx;
-                    slice.getMapper().setYSlice(idx+1);
+                    slice.getMapper().setYSlice(idx + 1);
                     break;
                 case vtkImageMapper.SlicingMode.X:
                     props.currentXIndex = idx;
@@ -145,15 +183,20 @@ function ohifInteractorStyleSlice(publicAPI, model) {
                     break;
             }
 
-            renderer.resetCamera();
+            if (publicAPI.getLastCameraPosition() != undefined) {
+                let pos = publicAPI.getLastCameraPosition();
+                renderer.getActiveCamera().setPosition(pos[0], pos[1], pos[2]);
+            } else {
+                renderer.resetCamera();
+            }
             document.getElementById("p2").innerHTML = "Slice # " + idx;
             document.getElementById("p21").innerHTML = "Position " + newPos;
-            document.getElementById("p22").innerHTML = " World Position " + worldPos;
+            document.getElementById("p22").innerHTML = " World Position " + Number.parseFloat(worldPos).toFixed(2);
             let camPos = renderer.getActiveCamera().getPosition();
-            let camPosF = [Number.parseFloat(camPos[0]).toFixed(2),Number.parseFloat(camPos[1]).toFixed(2),Number.parseFloat(camPos[2]).toFixed(2)]
+            let camPosF = [Number.parseFloat(camPos[0]).toFixed(2), Number.parseFloat(camPos[1]).toFixed(2), Number.parseFloat(camPos[2]).toFixed(2)]
             document.getElementById("p3").innerHTML = "Camera Position " + camPosF;
             let slicePos = slice.getPosition();
-            let slicePosF = [Number.parseFloat(slicePos[0]).toFixed(2),Number.parseFloat(slicePos[1]).toFixed(2),Number.parseFloat(slicePos[2]).toFixed(2)]
+            let slicePosF = [Number.parseFloat(slicePos[0]).toFixed(2), Number.parseFloat(slicePos[1]).toFixed(2), Number.parseFloat(slicePos[2]).toFixed(2)]
 
             document.getElementById("p4").innerHTML = "Slice Position " + slicePos;
         }
@@ -216,7 +259,6 @@ function ohifInteractorStyleSlice(publicAPI, model) {
     };
 
 
-
     //----------------------------------------------------------------------------
     // This is a way of dealing with images as if they were layers.
     // It looks through the renderer's list of props and sets the
@@ -256,7 +298,7 @@ function ohifInteractorStyleSlice(publicAPI, model) {
         }
     };
 
-    publicAPI.findSlice = ()=> {
+    publicAPI.findSlice = () => {
 
         function propMatch(prop) {
             if (
@@ -266,6 +308,7 @@ function ohifInteractorStyleSlice(publicAPI, model) {
             }
             return false;
         }
+
         const renderer = model.interactor.getCurrentRenderer();
         if (!renderer) {
             return;
@@ -323,7 +366,7 @@ export function extend(publicAPI, model, initialValues = {}) {
     // For more macro methods, see "Sources/macro.js"
 
     // Object specific methods
-    ohifInteractorStyleSlice(publicAPI, model,initialValues);
+    ohifInteractorStyleSlice(publicAPI, model, initialValues);
 }
 
 // ----------------------------------------------------------------------------
@@ -332,4 +375,4 @@ export const newInstance = macro.newInstance(extend, 'ohifInteractorStyleSlice')
 
 // ----------------------------------------------------------------------------
 
-export default Object.assign({ newInstance, extend });
+export default Object.assign({newInstance, extend});

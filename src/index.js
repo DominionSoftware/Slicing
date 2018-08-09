@@ -23,7 +23,7 @@ let yCurrentIndex = undefined;
 let xCurrentIndex = undefined;
 let created = false;
 let imageActor = undefined;
-let imageMapper =undefined;
+let imageMapper = undefined;
 let interactorStyle = undefined;
 
 const fullScreenRenderWindow = vtkFullScreenRenderWindow.newInstance({
@@ -32,23 +32,29 @@ const fullScreenRenderWindow = vtkFullScreenRenderWindow.newInstance({
 fullScreenRenderWindow.addController(controlPanel);
 const renderWindow = fullScreenRenderWindow.getRenderWindow();
 const renderer = fullScreenRenderWindow.getRenderer();
-document.getElementById("viewDropDown").onchange  = onViewChanged;
+document.getElementById("viewDropDown").onchange = onViewChanged;
 document.getElementById("imageDropDown").onchange = onImageChanged;
 
-function onViewChanged(){
+function onViewChanged() {
     let value = this.value;
     let mode = computeSlicingMode(scanDirection, value);
     imageMapper.setSlicingMode(mode);
     renderer.setActiveCamera(renderer.makeCamera());
-
+    renderer.getActiveCamera().setParallelProjection(true);
     computeCamera(scanDirection, value, renderer.getActiveCamera());
     renderer.resetCamera();
     renderer.resetCameraClippingRange();
+
+    // camera is set. Now save it for later...
+    interactorStyle.setLastCameraPosition(renderer.getActiveCamera().getPosition());
     renderWindow.getInteractor().setInteractorStyle(interactorStyle);
+    let camPos = renderer.getActiveCamera().getPosition();
+    let camPosF = [Number.parseFloat(camPos[0]).toFixed(2), Number.parseFloat(camPos[1]).toFixed(2), Number.parseFloat(camPos[2]).toFixed(2)]
+    document.getElementById("p3").innerHTML = "Camera Position " + camPosF;
     renderWindow.render();
 }
 
-function onImageChanged(){
+function onImageChanged() {
     let value = this.value;
     let promise = undefined;
     switch (value) {
@@ -85,33 +91,33 @@ function onImageChanged(){
     }
 }
 
-function loadImage(imageData){
+function loadImage(imageData) {
     let data = vtkImageData.newInstance();
 
     data.setDimensions([imageData.dims[0], imageData.dims[1], imageData.dims[2]]);
     data.setSpacing([imageData.spacing[0], imageData.spacing[1], imageData.spacing[2]]);
     let ipp = imageData.imagePositionPatient;
- 
+
     xIPP.push(ipp[0]);
-    for(let x = 1; x < imageData.dims[0]; x++){
-        xIPP.push(xIPP[x-1]+imageData.spacing[0]);
+    for (let x = 1; x < imageData.dims[0]; x++) {
+        xIPP.push(xIPP[x - 1] + imageData.spacing[0]);
     }
     yIPP.push(ipp[1]);
-    for(let y = 1; y < imageData.dims[1]; y++){
-        yIPP.push(yIPP[y-1]+imageData.spacing[1]);
+    for (let y = 1; y < imageData.dims[1]; y++) {
+        yIPP.push(yIPP[y - 1] + imageData.spacing[1]);
     }
     zIPP.push(ipp[2]);
-    for(let z = 1; z < imageData.dims[2]; z++){
-        zIPP.push(zIPP[z-1]+imageData.spacing[2]);
+    for (let z = 1; z < imageData.dims[2]; z++) {
+        zIPP.push(zIPP[z - 1] + imageData.spacing[2]);
     }
-    zCurrentIndex = zIPP.length/2 | 0;
-    yCurrentIndex = yIPP.length/2 |0;
-    xCurrentIndex = xIPP.length/2 |0;
+    zCurrentIndex = zIPP.length / 2 | 0;
+    yCurrentIndex = yIPP.length / 2 | 0;
+    xCurrentIndex = xIPP.length / 2 | 0;
 
-    let count =    imageData.dims[0] * imageData.dims[1] * imageData.dims[2]
+    let count = imageData.dims[0] * imageData.dims[1] * imageData.dims[2]
     let pixelArray = new Int16Array(count);
 
-    for(let pixelIndex = 0; pixelIndex < count;pixelIndex++) {
+    for (let pixelIndex = 0; pixelIndex < count; pixelIndex++) {
         pixelArray[pixelIndex] = imageData.image[pixelIndex];
     }
 
@@ -124,12 +130,11 @@ function loadImage(imageData){
     data.getPointData().setScalars(scalarArray);
 
 
-
     let initialValues = {
-        currentZIndex : zCurrentIndex,
-        currentYIndex : yCurrentIndex,
-        currentXIndex : xCurrentIndex,
-        zPositions : zIPP,
+        currentZIndex: zCurrentIndex,
+        currentYIndex: yCurrentIndex,
+        currentXIndex: xCurrentIndex,
+        zPositions: zIPP,
         yPositions: yIPP,
         xPositions: xIPP,
         zSpacing: imageData.spacing[2],
@@ -156,13 +161,15 @@ function loadImage(imageData){
 
     imageMapper.setInputData(data);
     imageActor.setMapper(imageMapper);
-    let  mode = computeSlicingMode(scanDirection,viewDirection);
+    let mode = computeSlicingMode(scanDirection, viewDirection);
     imageMapper.setSlicingMode(mode);
-    computeCamera(scanDirection,viewDirection, renderer.getActiveCamera());
+    computeCamera(scanDirection, viewDirection, renderer.getActiveCamera());
     renderWindow.getInteractor().setInteractorStyle(interactorStyle);
+
+    // set the position undefined so that
+    // the camera is reset.
+    interactorStyle.setLastCameraPosition(undefined);
     interactorStyle.moveSliceByWheel(0);
-    renderer.resetCamera();
-    renderer.resetCameraClippingRange();
     let e = document.getElementById("viewDropDown");
     e.value = 'A';
     var event = new Event('change');
@@ -171,6 +178,7 @@ function loadImage(imageData){
 
 
 }
+
 function computeSlicingModeForAP(viewOrientation) {
     switch (viewOrientation) {
         case 'A':
@@ -246,9 +254,7 @@ function computeCameraForAP(viewOrientation, camera) {
         case 'A':
         case 'P':
             camera.elevation(-90);
-            console.log(camera);
             break;
-
         case 'I':
         case 'S':
             camera.azimuth(180);
@@ -256,7 +262,6 @@ function computeCameraForAP(viewOrientation, camera) {
             break;
         case 'L':
         case 'R':
-
             camera.azimuth(90);
             camera.roll(-90);
             break;
@@ -324,7 +329,7 @@ function computeCamera(imageOrientation, viewOrientation, camera) {
             break;
     }
     camera.setParallelProjection(true);
-
+    interactorStyle.setLastCameraPosition(renderer.getActiveCamera().getPosition());
 }
 
 
