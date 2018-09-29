@@ -171,15 +171,15 @@ function ohifInteractorStyleSlice(publicAPI, model) {
             switch (mode) {
                 case vtkImageMapper.SlicingMode.Z:
                     props.currentZIndex = idx;
-                    slice.getMapper().setZSlice(idx);
+                    slice.getMapper().setZSlice(newPos);
                     break;
                 case vtkImageMapper.SlicingMode.Y:
                     props.currentYIndex = idx;
-                    slice.getMapper().setYSlice(idx + 1);
+                    slice.getMapper().setYSlice(newPos);
                     break;
                 case vtkImageMapper.SlicingMode.X:
                     props.currentXIndex = idx;
-                    slice.getMapper().setXSlice(idx);
+                    slice.getMapper().setXSlice(newPos);
                     break;
             }
 
